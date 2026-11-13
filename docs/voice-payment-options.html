@@ -293,12 +293,13 @@
         <li>The most natural experience: callers can say their card number or key it in, mixing the two freely.</li>
         <li>Prompts can use the same voice, tone and speech settings as the agent.</li>
         <li>Full control over parsing, confirmation, retries and wording.</li>
-        <li>The payment socket is separate from the agent, so the LLM never sees card data.</li>
+        <li>The payment WebSocket is separate from the agent, so the LLM never sees card data.</li>
       </ul></div>
       <div><h4>Cons</h4><ul class="pc cons">
         <li>Your WebSocket server receives full card numbers, so it, its logs and its hosting are in PCI scope.</li>
         <li>The speech-to-text and text-to-speech providers must be PCI-compliant ones. Conversation Intelligence (classic) must not be enabled.</li>
         <li>You build the processor integration yourself; there's no Pay Connector.</li>
+        <li>No built-in validation of card details. You build every check yourself: Luhn checksum, card type and length, expiry date, security-code length, and zip code. With <code>&lt;Pay&gt;</code> and the Payments API, every collected field is validated before it goes to the Pay Connector.</li>
         <li>Speech recognition errors on 16-digit numbers are common, so you need a confirmation step and careful normalization.</li>
       </ul></div>
     </div>
@@ -338,7 +339,9 @@
         <li>Your webhook receives raw card data, so it's in PCI scope, along with its logs.</li>
         <li>Turn-by-turn and less fluid than ConversationRelay; the caller can't easily interrupt or ask questions.</li>
         <li>You build the processor integration and the retry logic yourself.</li>
+        <li>No built-in validation of card details. You build every check yourself: Luhn checksum, card type and length, expiry date, security-code length, and zip code. With <code>&lt;Pay&gt;</code> and the Payments API, every collected field is validated before it goes to the Pay Connector.</li>
         <li>Speech accuracy on long digit strings needs the same normalization as option 3.</li>
+        <li>No safe way to confirm what was heard. <code>&lt;Say&gt;</code> isn't covered by <a href="https://www.twilio.com/en-us/pci-compliance" target="_blank" rel="noopener">Twilio's PCI Responsibility Matrix</a>, so don't use it to read card details back to the caller. Rely on validation and re-prompts instead of a read-back confirmation step.</li>
       </ul></div>
     </div>
     <h4>What we learned</h4>
@@ -380,7 +383,6 @@
     <div class="card"><h3 style="margin-top:0">Choose a ConversationRelay payment session if…</h3><p>spoken card entry is a requirement, you already run a PCI-compliant environment, and you want full control over the experience in the agent's voice.</p></div>
     <div class="card"><h3 style="margin-top:0">Choose <code>&lt;Gather&gt;</code> if…</h3><p>you need speech entry but would rather build stateless webhooks than run a WebSocket service, and your webhook can live inside your cardholder data environment.</p></div>
   </div>
-  <div class="callout c-success"><strong>A common combination</strong>Use the Payments API, with call audio suppressed during capture, as the default so card data stays out of your systems and the agent stays on the call. Fall back to <code>&lt;Pay&gt;</code> for callers who stall repeatedly. Add speech entry only if keypad entry measurably hurts completion rates.</div>
 </section>
 
 </main>
