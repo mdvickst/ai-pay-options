@@ -1,0 +1,8 @@
+.env
+.venv
+.git
+web/node_modules
+web/dist
+docs
+tests
+data/

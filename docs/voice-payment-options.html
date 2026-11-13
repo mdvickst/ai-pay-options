@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taking card payments with an AI voice agent on Twilio: four options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #F22F46; --red-dark: #C72A3E;
+    --blue: #0263E0; --blue-weak: #EBF4FF; --blue-dark: #001489;
+    --text: #121C2D; --text-weak: #4B5671; --text-weaker: #606B85;
+    --border: #CACDD8; --border-weak: #E1E3EA;
+    --bg: #FFFFFF; --bg-weak: #F4F4F6; --bg-strong: #121C2D;
+    --success: #14B053; --success-weak: #EDFDF3; --success-dark: #0E7C3A;
+    --warning: #F47C22; --warning-weak: #FEF5EE; --warning-dark: #8D3B00;
+    --error: #D61F1F; --error-weak: #FEECEC; --error-dark: #AD1111;
+    --radius: 8px; --radius-lg: 16px;
+    --shadow: 0 4px 16px rgba(18, 28, 45, 0.08), 0 1px 3px rgba(18, 28, 45, 0.06);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: Inter, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--text); background: var(--bg-weak); font-size: 16px; line-height: 1.6; }
+  code { font-family: "Fira Mono", Menlo, monospace; font-size: 0.86em; background: var(--bg-weak); border: 1px solid var(--border-weak); border-radius: 4px; padding: 1px 5px; }
+  a { color: var(--blue); }
+  header.hero { background: var(--bg-strong); color: #fff; padding: 56px 24px 64px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #fff; }
+  .eyebrow::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--red); }
+  header h1 { font-size: 40px; line-height: 1.2; margin: 16px 0 12px; font-weight: 700; letter-spacing: -0.01em; }
+  header p.lede { font-size: 19px; color: #CACDD8; max-width: 760px; margin: 0; }
+  header code { background: #283044; border-color: #4B5671; color: #fff; }
+  nav.toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+  nav.toc a { color: #fff; text-decoration: none; font-size: 14px; font-weight: 500; border: 1px solid #4B5671; border-radius: 999px; padding: 6px 14px; }
+  nav.toc a:hover { border-color: #fff; }
+  main { padding: 0 24px 80px; }
+  section { margin-top: 48px; }
+  h2 { font-size: 28px; line-height: 1.25; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h3 { font-size: 20px; margin: 28px 0 8px; }
+  h4 { font-size: 15px; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-weak); }
+  .sub { color: var(--text-weak); margin: 0 0 20px; max-width: 820px; }
+  .card { background: var(--bg); border: 1px solid var(--border-weak); border-radius: var(--radius-lg); box-shadow: var(--shadow); padding: 28px 32px; }
+  .card + .card { margin-top: 24px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 900px) { .grid4 { grid-template-columns: 1fr 1fr; } .grid2 { grid-template-columns: 1fr; } }
+  @media (max-width: 560px) { .grid4 { grid-template-columns: 1fr; } header h1 { font-size: 30px; } }
+  .opt { background: var(--bg); border: 1px solid var(--border-weak); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: inherit; border-top: 4px solid var(--blue); }
+  .opt:hover { border-color: var(--blue); }
+  .opt .num { font-size: 13px; font-weight: 600; color: var(--blue); }
+  .opt .name { font-size: 18px; font-weight: 700; }
+  .opt .tag { font-size: 14px; color: var(--text-weak); }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+  .b-low { background: var(--success-weak); color: var(--success-dark); }
+  .b-med { background: var(--warning-weak); color: var(--warning-dark); }
+  .b-high { background: var(--error-weak); color: var(--error-dark); }
+  .b-neutral { background: var(--bg-weak); color: var(--text-weak); border: 1px solid var(--border-weak); }
+  .b-blue { background: var(--blue-weak); color: var(--blue-dark); }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+  th, td { text-align: left; padding: 12px 14px; border-bottom: 1px solid var(--border-weak); vertical-align: top; }
+  thead th { background: var(--bg-weak); font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-weak); }
+  tbody th { font-weight: 600; width: 22%; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border-weak); border-radius: var(--radius); background: var(--bg); }
+  .scope-yes { color: var(--error-dark); font-weight: 600; }
+  .scope-no { color: var(--success-dark); font-weight: 600; }
+  .scope-dep { color: var(--warning-dark); font-weight: 600; }
+  .callout { border-radius: var(--radius); padding: 14px 18px; margin: 18px 0; border-left: 4px solid; font-size: 15px; }
+  .callout strong:first-child { display: block; margin-bottom: 2px; }
+  .c-info { background: var(--blue-weak); border-color: var(--blue); }
+  .c-warn { background: var(--warning-weak); border-color: var(--warning); }
+  .c-error { background: var(--error-weak); border-color: var(--error); }
+  .c-success { background: var(--success-weak); border-color: var(--success); }
+  .flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; margin: 16px 0 8px; }
+  .node { flex: 1 1 140px; min-width: 130px; background: var(--bg-weak); border: 1px solid var(--border-weak); border-radius: var(--radius); padding: 10px 12px; font-size: 13.5px; }
+  .node b { display: block; font-size: 13px; margin-bottom: 2px; }
+  .node.twilio { background: #FFF1F3; border-color: #F9B0B9; }
+  .node.yours { background: var(--blue-weak); border-color: #99CDFF; }
+  .node.scope { box-shadow: inset 0 0 0 2px var(--error); }
+  .arrow { flex: 0 0 28px; display: flex; align-items: center; justify-content: center; color: var(--text-weaker); font-weight: 700; }
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--text-weak); margin-top: 6px; }
+  .legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -2px; border: 1px solid var(--border); }
+  .legend .l-tw::before { background: #FFF1F3; border-color: #F9B0B9; }
+  .legend .l-yo::before { background: var(--blue-weak); border-color: #99CDFF; }
+  .legend .l-sc::before { background: #fff; box-shadow: inset 0 0 0 2px var(--error); border: none; }
+  .pc { list-style: none; padding: 0; margin: 0; }
+  .pc li { padding: 6px 0 6px 28px; position: relative; font-size: 15px; }
+  .pc li::before { position: absolute; left: 0; top: 6px; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  .pros li::before { content: "+"; background: var(--success-weak); color: var(--success-dark); }
+  .cons li::before { content: "\2212"; background: var(--error-weak); color: var(--error-dark); }
+  .meter { display: inline-flex; gap: 3px; vertical-align: middle; margin-left: 6px; }
+  .meter i { width: 18px; height: 8px; border-radius: 2px; background: var(--border-weak); }
+  .meter.m1 i:nth-child(-n+1), .meter.m2 i:nth-child(-n+2), .meter.m3 i:nth-child(-n+3), .meter.m4 i:nth-child(-n+4) { background: var(--blue); }
+  .opt-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 4px; }
+  .opt-head h2 { margin: 0; }
+  .learn { counter-reset: l; list-style: none; padding: 0; margin: 0; }
+  .learn li { counter-increment: l; position: relative; padding: 10px 0 10px 44px; border-bottom: 1px solid var(--border-weak); font-size: 15px; }
+  .learn li:last-child { border-bottom: none; }
+  .learn li::before { content: counter(l); position: absolute; left: 0; top: 10px; width: 28px; height: 28px; border-radius: 50%; background: var(--blue-weak); color: var(--blue-dark); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .learn li b { display: block; }
+  .check { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 32px; }
+  @media (max-width: 760px) { .check { columns: 1; } }
+  .check li { break-inside: avoid; padding: 6px 0 6px 28px; position: relative; font-size: 15px; }
+  .check li::before { content: ""; position: absolute; left: 0; top: 9px; width: 16px; height: 16px; border: 2px solid var(--blue); border-radius: 4px; }
+  .fn { font-size: 13px; color: var(--text-weak); margin: 10px 4px 0; }
+  sup a { text-decoration: none; font-weight: 600; }
+  footer { color: var(--text-weaker); font-size: 13px; padding: 32px 24px 48px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Twilio Programmable Voice · Payments</span>
+    <h1>Taking card payments in an AI voice agent call: four options on Twilio</h1>
+    <p class="lede">A practical comparison of <code>&lt;Pay&gt;</code>, the agent-assisted Payments API, a dedicated ConversationRelay payment session, and <code>&lt;Gather&gt;</code>. It covers how each one works, which systems end up in PCI scope, how much you'll have to build, and what we learned building all four behind a working AI agent.</p>
+    <nav class="toc">
+      <a href="#glance">At a glance</a>
+      <a href="#scope">PCI scope</a>
+      <a href="#pay">1 · &lt;Pay&gt;</a>
+      <a href="#payments-api">2 · Payments API</a>
+      <a href="#relay">3 · ConversationRelay</a>
+      <a href="#gather">4 · &lt;Gather&gt;</a>
+      <a href="#cross">Applies to all</a>
+      <a href="#choose">Which to choose</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<section id="glance">
+  <h2>At a glance</h2>
+  <p class="sub">Every option starts the same way. A caller is talking to an AI voice agent, the agent confirms the amount, and the caller agrees to pay. The agent can be built on ConversationRelay (as in our reference demo) or on bidirectional Media Streams with your own speech pipeline or a speech-to-speech model. What differs is which system collects the card details, which systems can see or hear them, and how the caller gets back to the agent afterwards.</p>
+  <div class="grid4">
+    <a class="opt" href="#pay"><span class="num">Option 1</span><span class="name">&lt;Pay&gt; verb</span><span class="tag">Twilio runs a scripted keypad flow, then hands the caller back to the agent.</span><span><span class="badge b-low">Smallest PCI scope</span></span><span><span class="badge b-low">Low effort</span></span></a>
+    <a class="opt" href="#payments-api"><span class="num">Option 2</span><span class="name">Payments API</span><span class="tag">The agent stays on the call and steps the caller through keypad entry one field at a time.</span><span><span class="badge b-low">Smallest PCI scope</span></span><span><span class="badge b-med">Medium–high effort</span></span></a>
+    <a class="opt" href="#relay"><span class="num">Option 3</span><span class="name">ConversationRelay payment session</span><span class="tag">The call moves to a second ConversationRelay session; your code parses spoken or keyed card details.</span><span><span class="badge b-high">Large PCI scope</span></span><span><span class="badge b-high">High effort</span></span></a>
+    <a class="opt" href="#gather"><span class="num">Option 4</span><span class="name">&lt;Gather&gt; loop</span><span class="tag">A speech-and-keypad <code>&lt;Gather&gt;</code> collects each field; your webhook validates it.</span><span><span class="badge b-high">Large PCI scope</span></span><span><span class="badge b-med">Medium effort</span></span></a>
+  </div>
+
+  <div class="table-wrap" style="margin-top:24px">
+    <table>
+      <thead><tr><th></th><th>1 · &lt;Pay&gt;</th><th>2 · Payments API</th><th>3 · ConversationRelay session</th><th>4 · &lt;Gather&gt;</th></tr></thead>
+      <tbody>
+        <tr><th>How card details are entered</th><td>Keypad</td><td>Keypad</td><td>Speech or keypad</td><td>Speech or keypad</td></tr>
+        <tr><th>Collected by</th><td>Twilio</td><td>Twilio, with your app deciding which field to ask for next</td><td>Your WebSocket server</td><td>Your webhook</td></tr>
+        <tr><th>Card data reaches your servers</th><td class="scope-dep">Only if you host the Pay Connector endpoint</td><td class="scope-dep">Only if you host the Pay Connector endpoint<sup><a href="#fn-audio">1</a></sup></td><td class="scope-yes">Yes: transcripts and keypresses</td><td class="scope-yes">Yes: <code>Digits</code> and <code>SpeechResult</code></td></tr>
+        <tr><th>Agent on the call during entry</th><td>No (call is redirected)</td><td>Yes</td><td>No (separate session)</td><td>No (call is redirected)</td></tr>
+        <tr><th>Prompts spoken by</th><td>Twilio, with prompts you can customize</td><td>Your app, in the agent's voice</td><td>Your app, in any ConversationRelay voice</td><td>Your app, through <code>&lt;Say&gt;</code></td></tr>
+        <tr><th>Card charged by</th><td>Pay Connector</td><td>Pay Connector</td><td>Your code calls the processor</td><td>Your code calls the processor</td></tr>
+        <tr><th>Effort to production</th><td>Low <span class="meter m1"><i></i><i></i><i></i><i></i></span></td><td>Medium–high <span class="meter m3"><i></i><i></i><i></i><i></i></span></td><td>High <span class="meter m4"><i></i><i></i><i></i><i></i></span></td><td>Medium <span class="meter m2"><i></i><i></i><i></i><i></i></span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="fn" id="fn-audio"><sup>1</sup> By default the Payments API keeps sending call audio to your agent while it collects digits. Card details the caller says aloud, or keypad tones carried in the audio (in-band DTMF), can then reach your speech-to-text, transcripts, LLM, recordings or Media Streams. Ask your Twilio account team to set the account flag that stops audio transmission while digit collection is in progress.</p>
+</section>
+
+<section id="scope">
+  <h2>What ends up in PCI scope</h2>
+  <p class="sub">The main question for your security team is simple: which systems ever see a full card number, CVV or expiry date? Anything that does is in scope for PCI DSS. Options 1 and 2 keep card data inside Twilio and your payment processor. Options 3 and 4 send it through your own services.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>System</th><th>1 · &lt;Pay&gt;</th><th>2 · Payments API</th><th>3 · ConversationRelay session</th><th>4 · &lt;Gather&gt;</th></tr></thead>
+      <tbody>
+        <tr><th>Twilio account (PCI Mode on)</th><td class="scope-yes">Required</td><td class="scope-yes">Required</td><td class="scope-yes">Required</td><td class="scope-yes">Required</td></tr>
+        <tr><th>AI agent and LLM</th><td class="scope-no">Out of scope; gets only the result</td><td class="scope-no">Out of scope; gets masked progress only<sup><a href="#fn-audio-scope">2</a></sup></td><td class="scope-no">Out of scope if the parser doesn't use an LLM</td><td class="scope-no">Out of scope; gets only the result</td></tr>
+        <tr><th>Your app or webhook servers</th><td class="scope-no">Out of scope; status callbacks are masked</td><td class="scope-no">Out of scope; status callbacks are masked</td><td class="scope-yes">In scope: the WebSocket server gets raw transcripts and DTMF</td><td class="scope-yes">In scope: the <code>action</code> webhook gets raw digits and speech</td></tr>
+        <tr><th>Speech-to-text provider</th><td class="scope-no">Not used</td><td class="scope-no">Not used for card data</td><td class="scope-yes">Must be a PCI-compliant provider (see <a href="https://www.twilio.com/en-us/pci-compliance" target="_blank" rel="noopener">Twilio's Responsibility Matrix</a>)</td><td class="scope-yes">Twilio speech recognition processes the spoken card number</td></tr>
+        <tr><th>Pay Connector endpoint</th><td class="scope-dep">Vendor connector (Stripe, Braintree and others): processor only. A connector endpoint you host: in scope.</td><td class="scope-dep">Same as &lt;Pay&gt;</td><td>Not used</td><td>Not used</td></tr>
+        <tr><th>Logs, traces, recordings</th><td class="scope-no">Twilio redacts them</td><td class="scope-no">Twilio redacts them</td><td class="scope-yes">You must mask your own logs and frame dumps, and pause call recordings during digit collection</td><td class="scope-yes">You must mask your own logs and request dumps, and pause call recordings during digit collection</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="fn" id="fn-audio-scope"><sup>2</sup> This assumes call audio is suppressed during digit collection. By default the Payments API keeps sending call audio to your agent while it collects digits, so card details the caller says aloud, or in-band DTMF tones, can reach your speech-to-text, transcripts, LLM, recordings or Media Streams. An account flag stops audio transmission while digit collection is in progress; work with your Twilio sales team to have it set on your account.</p>
+  <div class="callout c-warn"><strong>Your QSA has the final say</strong>This table describes where card data flows in each design. Your Qualified Security Assessor decides your actual PCI scope and SAQ type. <a href="https://www.twilio.com/en-us/pci-compliance" target="_blank" rel="noopener">Twilio's PCI Responsibility Matrix</a> sets out what Twilio covers and what you're responsible for.</div>
+  <div class="callout c-info"><strong>Know where your Pay Connector sends card data</strong>Vendor Pay Connectors (Stripe, Braintree, CardConnect and others) send card data straight to the processor, so your systems stay out of scope. If you configure a Generic Pay Connector that posts to a URL you provide, Twilio sends the full card number, CVV and expiry to that URL. Point it at a PCI-compliant gateway or vault, or treat that endpoint as part of your cardholder data environment.</div>
+</section>
+
+<!-- OPTION 1 -->
+<section id="pay">
+  <div class="card">
+    <div class="opt-head"><span class="badge b-blue">Option 1</span><h2>&lt;Pay&gt; verb</h2><span class="badge b-low">Smallest PCI scope</span><span class="badge b-low">Low effort</span></div>
+    <p class="sub">When the caller agrees to pay, the agent says a short hand-off line and your app redirects the live call to TwiML containing <code>&lt;Pay&gt;</code>. Twilio prompts for each field, validates the input, sends it to the Pay Connector, and posts the result to your <code>action</code> URL. That URL returns TwiML that reconnects the caller to the agent, which opens with the outcome.</p>
+    <div class="flow">
+      <div class="node yours"><b>AI agent</b>Confirms the amount and says the hand-off line</div><div class="arrow">→</div>
+      <div class="node yours"><b>Your app</b>Redirects the call to <code>&lt;Pay&gt;</code> TwiML</div><div class="arrow">→</div>
+      <div class="node twilio"><b>Twilio &lt;Pay&gt;</b>Prompts, captures keypresses, validates</div><div class="arrow">→</div>
+      <div class="node twilio scope"><b>Pay Connector</b>Charges or tokenizes the card</div><div class="arrow">→</div>
+      <div class="node yours"><b>Your <code>action</code> URL</b>Gets the result and reconnects the agent</div>
+    </div>
+    <div class="legend"><span class="l-tw">Twilio</span><span class="l-yo">Your systems</span><span class="l-sc">Handles card data</span></div>
+    <div class="grid2">
+      <div><h4>Pros</h4><ul class="pc pros">
+        <li>Card data never reaches your app or the LLM, so this has the smallest PCI scope.</li>
+        <li>Twilio handles validation, retries (<code>maxAttempts</code>), timeouts and the connector call.</li>
+        <li>Each field's prompt can be customized for each error type, attempt number and card type with <code>&lt;Prompt&gt;</code>.</li>
+        <li>Very little code: one TwiML document, one status callback, one action handler.</li>
+      </ul></div>
+      <div><h4>Cons</h4><ul class="pc cons">
+        <li>The agent leaves the call, so the caller can't ask a question in the middle of entering their card.</li>
+        <li>Keypad only, with scripted prompts. It's less conversational than the rest of the call.</li>
+        <li>The <code>&lt;Pay&gt;</code> voice can differ from the agent's ConversationRelay voice unless you match them.</li>
+        <li>Reconnecting starts a new ConversationRelay session, so you have to carry the conversation context across yourself.</li>
+      </ul></div>
+    </div>
+    <h4>What we learned</h4>
+    <ul class="learn">
+      <li><b>Redirect when the hand-off line finishes playing</b>Redirecting as soon as the agent starts its hand-off sentence cuts it off mid-word, and a fixed delay is either too short or leaves dead air. Subscribe to playback events with <code>events="speaker-events tokens-played"</code> on <code>&lt;ConversationRelay&gt;</code>. Once the hand-off text has been sent, redirect the call when ConversationRelay reports that the agent has stopped speaking. Keep a timeout as a fallback in case no event arrives.</li>
+      <li><b>Carry the outcome back to the agent</b>Put the result in the agent's history and greeting, for example "Your payment of $80.38 was successful. Anything else?". The new session then picks up naturally.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- OPTION 2 -->
+<section id="payments-api">
+  <div class="card">
+    <div class="opt-head"><span class="badge b-blue">Option 2</span><h2>Agent-assisted Payments API</h2><span class="badge b-low">Smallest PCI scope</span><span class="badge b-med">Medium–high effort</span></div>
+    <p class="sub">The call stays connected to the agent. Your app creates a Payment session on the live call (<code>POST /Calls/{CallSid}/Payments</code>), then sends one update per field (<code>Capture=payment-card-number</code>, then <code>expiration-date</code>, and so on). While Twilio is collecting a field, it intercepts the keypad tones, so neither the agent nor your app ever receives the digits. Status callbacks report masked progress after each keypress and when each field finishes. When every field is in, <code>Status=complete</code> sends the card to the connector.</p>
+    <div class="flow">
+      <div class="node yours"><b>AI agent</b>Handles anything the caller says</div><div class="arrow">↔</div>
+      <div class="node yours"><b>Your payment orchestrator</b>Requests each field, speaks the prompts, handles errors</div><div class="arrow">↔</div>
+      <div class="node twilio"><b>Twilio Payments API</b>Captures the keypad tones and sends masked callbacks</div><div class="arrow">→</div>
+      <div class="node twilio scope"><b>Pay Connector</b>Charges or tokenizes the card</div>
+    </div>
+    <div class="legend"><span class="l-tw">Twilio</span><span class="l-yo">Your systems</span><span class="l-sc">Handles card data</span></div>
+    <div class="grid2">
+      <div><h4>Pros</h4><ul class="pc pros">
+        <li>The same small PCI scope as <code>&lt;Pay&gt;</code> (with call audio suppressed during capture), while the agent stays on the call.</li>
+        <li>The agent stays on the line between fields, so the caller can ask a question or say "I typed it wrong" and get an answer.</li>
+        <li>You have full control over the flow: field order, prompt wording in the agent's voice, retry rules, silence handling, and when to complete or cancel.</li>
+        <li>Masked progress for each keypress (for example "7 digits entered") lets you coach the caller.</li>
+      </ul></div>
+      <div><h4>Cons</h4><ul class="pc cons">
+        <li>You build the whole state machine: field order, prompts, retries, silence detection, completion and cancellation.</li>
+        <li>Twilio plays no prompts in this mode. Everything the caller hears comes from your app.</li>
+        <li>Callbacks arrive asynchronously, and many of them, so timing problems are easy to create.</li>
+        <li>Letting an LLM drive each step is slow and unpredictable (see below).</li>
+      </ul></div>
+    </div>
+
+    <div class="callout c-warn"><strong>Call audio keeps flowing during capture by default</strong>The Payments API stops keypad tones from reaching your app, but by default the call's audio still goes to your agent while Twilio is collecting a field. If the caller reads their card number aloud, or their phone sends keypad tones in the audio (in-band DTMF), those card details can reach your speech-to-text, transcripts, LLM, recordings or Media Streams. Ask your Twilio account team to set the account flag that stops audio transmission while digit collection is in progress. With it set, the agent can't hear the caller while Twilio is collecting a field, so design the conversation to handle questions between fields.</div>
+    <div class="callout c-error"><strong>Don't let the LLM drive the capture sequence</strong>Our first version turned every Payments API callback into an LLM turn. That caused stale prompts ("enter the expiration date" after the caller had already entered it), repeated sentences, fields asked for out of order, and a payment that processed before the zip code prompt played. A reasoning model can spend 5–20 seconds on one turn, so prompts arrive after the caller has moved on. The version that works keeps the capture sequence on the server and uses the LLM only when the caller speaks.</div>
+
+    <h4>How the conversation should go</h4>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Event</th><th>What your app does</th><th>Spoken by</th></tr></thead>
+        <tbody>
+          <tr><th>Caller agrees to pay</th><td>The agent calls a <code>start_payment</code> tool. Your app creates the session, requests <code>payment-card-number</code> and plays the card prompt. The agent says nothing more that turn.</td><td>Your app</td></tr>
+          <tr><th>Keypress callback (<code>PartialResult=true</code>)</th><td>Store the digit count and stop the silence timer. Never pass these callbacks to the LLM.</td><td>No one</td></tr>
+          <tr><th>Field captured</th><td>Request the first field still listed in <code>Required</code> and play its prompt immediately. For American Express, ask for a 4-digit security code.</td><td>Your app</td></tr>
+          <tr><th>Field error (<code>ErrorType</code>)</th><td>Request the same field again and play a short re-prompt for that error type. After 2 failures on one field, cancel and hand the conversation to the agent.</td><td>Your app, then the agent if retries run out</td></tr>
+          <tr><th>No keypresses for about 8 seconds</th><td>Repeat the prompt once. If still nothing, cancel and hand the conversation to the agent.</td><td>Your app</td></tr>
+          <tr><th>Caller speaks</th><td>With call audio suppressed during capture, the agent only hears the caller between fields, or after a field times out or fails. The silence timer pauses. The agent gets the current payment state plus a few tools (repeat the prompt, recapture a field, cancel) and answers in one sentence.</td><td>The agent</td></tr>
+          <tr><th>All fields captured (<code>Required</code> is empty)</th><td>Say "One moment while I process your payment", then send <code>Status=complete</code>.</td><td>Your app</td></tr>
+          <tr><th><code>Result</code> callback</th><td>Play a fixed, friendly line ("Your payment of $X was successful" or "Sorry, your card was declined"), then hand the conversation back to the agent.</td><td>Your app</td></tr>
+          <tr><th>Hangup, or error 21220 on an update</th><td>Stop timers, drop queued speech and LLM turns, and make no more API calls for that session.</td><td>No one</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>What we learned</h4>
+    <ul class="learn">
+      <li><b><code>Required</code> uses capture names</b>The callback's <code>Required</code> parameter lists hyphenated names such as <code>expiration-date,security-code</code>. Matching on names like <code>ExpirationDate</code> makes it look as if every field is done after the card number.</li>
+      <li><b>After an error you must request the field again</b>Twilio doesn't retry on its own. Send <code>Capture=&lt;field&gt;</code> again with each re-prompt.</li>
+      <li><b>Don't send <code>ChargeAmount</code> and <code>TokenType</code> together</b>Creating a session with both returned <code>64020 Invalid input</code> in our testing. Send <code>ChargeAmount</code> to charge, or <code>TokenType</code> without an amount to tokenize.</li>
+      <li><b>Set <code>PaymentConnector</code> to the connector's unique name</b>Use the name shown in Console (for example <code>Stripe_1</code>), not its <code>XB…</code> SID. A SID returns 64004 in <code>&lt;Pay&gt;</code> and 64020 from the API.</li>
+      <li><b>The silence timer is yours to build</b>Start it after the prompt plays, stop it on the first keypress, and pause it while the caller is talking to the agent. A timer that fires while the caller is typing requests the field again and wipes their entry.</li>
+      <li><b>Run one agent turn at a time, and cancel it when the caller interrupts</b>Overlapping turns overwrite each other's conversation history. Queue turns for each call, and cancel the current turn when the caller speaks over it, so a stale reply never plays.</li>
+      <li><b>Keep card details and confirmation codes out of the LLM prompt</b>Give the model only masked state ("waiting for the security code; 0 digits entered"). One reasoning model's safety classifier flagged a payment conversation as a policy violation. If that happens, retry with a minimal prompt and fall back to a fixed line.</li>
+      <li><b>Choose a low-latency model with thinking off</b>The LLM now only handles unscripted speech, so a small, fast model with reasoning disabled keeps those replies under about 2 seconds.</li>
+      <li><b>Suppress call audio during digit collection</b>By default the Payment session takes the keypad tones but leaves call audio flowing, so ConversationRelay or Media Streams keep receiving the caller's voice and any in-band DTMF while Twilio is collecting a field. Have your account team set the flag that stops audio transmission during digit collection, then test that your agent stays silent and handles the caller's questions between fields.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- OPTION 3 -->
+<section id="relay">
+  <div class="card">
+    <div class="opt-head"><span class="badge b-blue">Option 3</span><h2>ConversationRelay payment session</h2><span class="badge b-high">Large PCI scope</span><span class="badge b-high">High effort</span></div>
+    <p class="sub">After the hand-off line, your app redirects the call to a second <code>&lt;Connect&gt;&lt;ConversationRelay&gt;</code> pointing at a separate WebSocket that is used only for payments. A deterministic parser (not an LLM) turns each transcript or keypress into digits, validates them, and reads back the brand and last four digits for confirmation. It then charges through your processor and ends the session with handoff data. The <code>&lt;Connect&gt;</code> <code>action</code> URL reconnects the caller to the agent.</p>
+    <div class="flow">
+      <div class="node yours"><b>AI agent</b>Says the hand-off line</div><div class="arrow">→</div>
+      <div class="node twilio scope"><b>ConversationRelay</b>Speech-to-text, text-to-speech, DTMF</div><div class="arrow">→</div>
+      <div class="node yours scope"><b>Payment WebSocket</b>Parses, validates and confirms (no LLM)</div><div class="arrow">→</div>
+      <div class="node yours scope"><b>Your processor integration</b>Charges or tokenizes the card</div><div class="arrow">→</div>
+      <div class="node yours"><b>Agent session</b>Resumes with the outcome</div>
+    </div>
+    <div class="legend"><span class="l-tw">Twilio</span><span class="l-yo">Your systems</span><span class="l-sc">Handles card data</span></div>
+    <div class="grid2">
+      <div><h4>Pros</h4><ul class="pc pros">
+        <li>The most natural experience: callers can say their card number or key it in, mixing the two freely.</li>
+        <li>Prompts can use the same voice, tone and speech settings as the agent.</li>
+        <li>Full control over parsing, confirmation, retries and wording.</li>
+        <li>The payment socket is separate from the agent, so the LLM never sees card data.</li>
+      </ul></div>
+      <div><h4>Cons</h4><ul class="pc cons">
+        <li>Your WebSocket server receives full card numbers, so it, its logs and its hosting are in PCI scope.</li>
+        <li>The speech-to-text and text-to-speech providers must be PCI-compliant ones. Conversation Intelligence (classic) must not be enabled.</li>
+        <li>You build the processor integration yourself; there's no Pay Connector.</li>
+        <li>Speech recognition errors on 16-digit numbers are common, so you need a confirmation step and careful normalization.</li>
+      </ul></div>
+    </div>
+    <h4>What we learned</h4>
+    <ul class="learn">
+      <li><b>Clean up the transcript before parsing it</b>Transcripts arrive as <code>4111-1111…</code>, <code>4O11</code>, <code>four one one one</code>, <code>double four</code> or <code>oh</code>. Strip punctuation, remove spaces between digit groups, and convert number words. Inside tokens that already contain a digit, convert lookalike letters (O/Q→0, I/l→1, Z→2, S→5, B→8). Leave ordinary words alone.</li>
+      <li><b>Validate as you go</b>Run a Luhn check and a brand-specific length check (Amex is 15 digits, most others 16) on the card number, and use the brand to choose a 3- or 4-digit CVV. Wait a few seconds after the last fragment before evaluating, because callers read numbers in chunks.</li>
+      <li><b>Confirm before charging</b>Read back "a Visa ending in 4 2 4 2", spacing the digits so text-to-speech reads them one at a time. Accept yes/no by voice or 1/2 by keypad.</li>
+      <li><b>Mask everything you log</b>Replace digits and number words in any transcript you log or publish. Keep WebSocket frame logging off (or behind its own flag) anywhere card data flows.</li>
+      <li><b>Pause call recording during collection</b>If the call is recorded, card details spoken or keyed during the payment session end up in the recording. Pause the recording with the Recordings API (<code>Status=paused</code>, with <code>PauseBehavior=skip</code> or <code>silence</code>) before the first payment prompt, and resume it (<code>Status=in-progress</code>) after the session ends.</li>
+      <li><b>Return through handoff data</b>End the payment socket with an <code>end</code> message carrying <code>handoffData</code> (the outcome only, never card data). The <code>action</code> URL uses it to greet the caller back in the agent session.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- OPTION 4 -->
+<section id="gather">
+  <div class="card">
+    <div class="opt-head"><span class="badge b-blue">Option 4</span><h2>&lt;Gather&gt; loop</h2><span class="badge b-high">Large PCI scope</span><span class="badge b-med">Medium effort</span></div>
+    <p class="sub">The call is redirected to a <code>&lt;Gather input="speech dtmf"&gt;</code> for each field: card number, expiry, CVV, then zip code. Each <code>&lt;Gather&gt;</code> posts <code>Digits</code> or <code>SpeechResult</code> to your <code>action</code> webhook. The webhook normalizes and validates the input, then returns the next <code>&lt;Gather&gt;</code> or a re-prompt. After the last field, your code charges the card and reconnects the caller to the agent.</p>
+    <div class="flow">
+      <div class="node yours"><b>AI agent</b>Says the hand-off line</div><div class="arrow">→</div>
+      <div class="node twilio scope"><b>Twilio &lt;Gather&gt;</b>Speech recognition and DTMF, one field at a time</div><div class="arrow">→</div>
+      <div class="node yours scope"><b>Your <code>action</code> webhook</b>Normalizes, validates, returns the next step</div><div class="arrow">→</div>
+      <div class="node yours scope"><b>Your processor integration</b>Charges or tokenizes the card</div><div class="arrow">→</div>
+      <div class="node yours"><b>Agent session</b>Resumes with the outcome</div>
+    </div>
+    <div class="legend"><span class="l-tw">Twilio</span><span class="l-yo">Your systems</span><span class="l-sc">Handles card data</span></div>
+    <div class="grid2">
+      <div><h4>Pros</h4><ul class="pc pros">
+        <li>Speech and keypad entry with plain TwiML and webhooks; no WebSocket server.</li>
+        <li>Stateless, request/response handlers that are easy to reason about and test.</li>
+        <li>Built-in speech hints such as <code>$OOV_CLASS_DIGIT_SEQUENCE</code>, <code>$MONTH $YEAR</code> and <code>$POSTALCODE</code>.</li>
+        <li><code>&lt;Say&gt;</code> supports ElevenLabs voices, so prompts can sound like the agent.</li>
+      </ul></div>
+      <div><h4>Cons</h4><ul class="pc cons">
+        <li>Your webhook receives raw card data, so it's in PCI scope, along with its logs.</li>
+        <li>Turn-by-turn and less fluid than ConversationRelay; the caller can't easily interrupt or ask questions.</li>
+        <li>You build the processor integration and the retry logic yourself.</li>
+        <li>Speech accuracy on long digit strings needs the same normalization as option 3.</li>
+      </ul></div>
+    </div>
+    <h4>What we learned</h4>
+    <ul class="learn">
+      <li><b>Give callers time to pause</b>With <code>speechTimeout="auto"</code>, recognition ended while callers paused between digit groups. A fixed <code>speechTimeout="5"</code> lets them read the number in chunks.</li>
+      <li><b>Set <code>numDigits</code> once the length is known</b>After the brand is known, set <code>numDigits</code> for expiry (4), CVV (3, or 4 for Amex) and zip (5) so keypad entry finishes on its own. Leave it unset for the card number, and finish with <code>#</code>.</li>
+      <li><b>Use HTTPS with a trusted certificate</b>In a PCI workflow, a <code>&lt;Gather&gt;</code> <code>action</code> URL over plain HTTP or with a self-signed certificate fails with error 13337.</li>
+      <li><b>Match the agent's voice</b>Use <code>&lt;Say voice="ElevenLabs.{voiceId}"&gt;</code> with the agent's voice ID so the caller doesn't hear a different voice during payment.</li>
+      <li><b>Pause call recording during collection</b>If the call is recorded, card details spoken or keyed during the <code>&lt;Gather&gt;</code> steps end up in the recording. Pause the recording with the Recordings API (<code>Status=paused</code>, with <code>PauseBehavior=skip</code> or <code>silence</code>) before the first payment prompt, and resume it (<code>Status=in-progress</code>) after the last field.</li>
+      <li><b>Turn on <code>actionOnEmptyResult</code></b>Your webhook then sees no-input attempts and can count retries, instead of TwiML silently moving on.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="cross">
+  <h2>Applies to all four options</h2>
+  <p class="sub">These issues came up regardless of which option we were building.</p>
+  <div class="card">
+    <ul class="check">
+      <li><b>Turn on PCI Mode in a dedicated account or subaccount.</b> It's set per account and can't be turned off. Once it's on, recordings are kept for one year and native or Marketplace transcription is unavailable.</li>
+      <li><b>Keep every Twilio resource in the same account.</b> The API key, TwiML App, phone number and Pay Connector must belong to the account that owns the call. A TwiML App in another account gave us generic 31000 errors in the browser.</li>
+      <li><b>Never give the LLM card data.</b> Pass it only results and masked state, and filter the model's output so it can't speak invented "system event" text to the caller.</li>
+      <li><b>Speak fixed lines for results.</b> Don't read raw confirmation codes or error codes aloud. Map failures to plain reasons such as "your card was declined" or "the card number wasn't valid".</li>
+      <li><b>Mask before you log.</b> Show only the last four digits of the card number and fully mask CVV and expiry. Give each kind of log (LLM, WebSocket, connector) its own on/off switch, and keep sensitive ones off in production.</li>
+      <li><b>If you host the Pay Connector endpoint, answer requests idempotently.</b> Twilio can retry a request. Key your response on <code>transaction_id</code> and return the same <code>charge_id</code> or <code>token_id</code> every time.</li>
+      <li><b>Stop all work when the call ends.</b> On the <code>completed</code> status callback, cancel timers and queued turns. Late updates to a finished call fail with 21220.</li>
+      <li><b>Pick a voice model that supports your formatting.</b> Expressive tags like <code>[warmly]</code> only work on ElevenLabs v3/v4 voices. Other models may read them out loud.</li>
+      <li><b>Log the LLM prompts in development.</b> Logging the full prompt and response is the quickest way to see why the agent did something unexpected.</li>
+      <li><b>Test the unhappy paths on real calls.</b> Wrong digit counts, typing during a prompt, talking during entry, long silences, declines and hangups each produced different bugs in our testing.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="choose">
+  <h2>Which option to choose</h2>
+  <div class="grid2">
+    <div class="card"><h3 style="margin-top:0">Start with <code>&lt;Pay&gt;</code> if…</h3><p>you want the smallest PCI scope and the fastest launch, and a short scripted keypad step in the middle of an AI conversation is acceptable. It's the right default for most self-service payment lines.</p></div>
+    <div class="card"><h3 style="margin-top:0">Choose the Payments API if…</h3><p>the agent must stay on the line during entry, to answer questions or coach the caller, and you still want card data kept out of your systems. Ask your account team to suppress call audio during digit collection, and budget for a server-side state machine that runs the capture sequence, and use the LLM only for unscripted speech.</p></div>
+    <div class="card"><h3 style="margin-top:0">Choose a ConversationRelay payment session if…</h3><p>spoken card entry is a requirement, you already run a PCI-compliant environment, and you want full control over the experience in the agent's voice.</p></div>
+    <div class="card"><h3 style="margin-top:0">Choose <code>&lt;Gather&gt;</code> if…</h3><p>you need speech entry but would rather build stateless webhooks than run a WebSocket service, and your webhook can live inside your cardholder data environment.</p></div>
+  </div>
+  <div class="callout c-success"><strong>A common combination</strong>Use the Payments API, with call audio suppressed during capture, as the default so card data stays out of your systems and the agent stays on the call. Fall back to <code>&lt;Pay&gt;</code> for callers who stall repeatedly. Add speech entry only if keypad entry measurably hurts completion rates.</div>
+</section>
+
+</main>
+
+<footer>Based on a working reference demo with four scenarios behind one ConversationRelay AI agent, using Twilio Agent Connect and a Pay Connector pointed at a mock processor. Error codes and behavior were observed in testing. Check the Twilio docs and your QSA before going to production.</footer>
+</body>
+</html>

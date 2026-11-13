@@ -1,0 +1,21 @@
+[project]
+name = "acme-pay-options"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "twilio-agent-connect[server] @ git+https://github.com/twilio/twilio-agent-connect-python.git",
+    "openai-agents>=0.24",
+    "twilio>=9.13,<10",
+    "python-dotenv>=1.0",
+    "recognizers-text-number",
+    "emoji<1",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
